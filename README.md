@@ -19,7 +19,7 @@ Ideally, create a virtual environment to install these dependencies as seen in t
 Place your data files in the `data/` directory:
 - `train.txt` — Training data (label \t sentence)
 - `dev.txt` — Development/validation data (label \t sentence)
-- `glove.6B.300d-relativized.txt` — GloVe embeddings (300d, relativized)
+- `glove.6B.300d-relativized.txt` — GloVe embeddings (300d, relativized). 300d was more optimal than 50d as it allowed us to maximize our dev accuracy.
 
 ## Running the Code
 
