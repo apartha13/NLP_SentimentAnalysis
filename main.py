@@ -12,28 +12,29 @@ from DANmodels import (
     DAN_2Layer,
     load_glove_embeddings
 )
+from bpe_utils import BPE, BPESentimentDataset
 
+# Training function
 def train_epoch(data_loader, model, loss_fn, optimizer):
-    """Train for one epoch (original signature/behavior)"""
     size = len(data_loader.dataset)
     num_batches = len(data_loader)
     model.train()
     train_loss, correct = 0, 0
     for batch, (X, y) in enumerate(data_loader):
-        # Decide dtype based on model/input: embedding models expect Long indices, BOW expects floats
+        # embedding models expect Long indices, BOW expects floats which is deciding dtype
         if hasattr(model, 'embedding') or X.dtype in (torch.long, torch.int):
             if X.dtype != torch.long:
                 X = X.long()
         else:
             X = X.float()
 
-        # Compute prediction error
+        # compute prediction error
         pred = model(X)
         loss = loss_fn(pred, y)
         train_loss += loss.item()
         correct += (pred.argmax(1) == y).type(torch.float).sum().item()
 
-        # Backpropagation
+        # backpropagation
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -42,33 +43,33 @@ def train_epoch(data_loader, model, loss_fn, optimizer):
     accuracy = correct / size
     return accuracy, average_train_loss
 
-
+# Evaluation function
 def eval_epoch(data_loader, model, loss_fn, optimizer=None):
-    """Evaluate on dev set (original signature/behavior)"""
     size = len(data_loader.dataset)
     num_batches = len(data_loader)
     model.eval()
     eval_loss = 0
     correct = 0
     for batch, (X, y) in enumerate(data_loader):
-        # Match dtype logic from train_epoch
         if hasattr(model, 'embedding') or X.dtype in (torch.long, torch.int):
             if X.dtype != torch.long:
                 X = X.long()
         else:
             X = X.float()
 
-        # Compute prediction error
+        # forward pass and compute prediction error
         pred = model(X)
         loss = loss_fn(pred, y)
         eval_loss += loss.item()
+        # correct predictions for accuracy
         correct += (pred.argmax(1) == y).type(torch.float).sum().item()
 
+    # computing average loss and accuracy
     average_eval_loss = eval_loss / num_batches
     accuracy = correct / size
     return accuracy, average_eval_loss
 
-
+# Experiment function to run training and evaluation for multiple epochs
 def experiment(model, train_loader, test_loader, epochs=100, lr=1e-4):
     """Compatibility wrapper — original experiment() behavior"""
     loss_fn = nn.NLLLoss()
@@ -90,16 +91,18 @@ def experiment(model, train_loader, test_loader, epochs=100, lr=1e-4):
 
 
 def main():
+    # Set up argument parser
     parser = argparse.ArgumentParser(description='Train sentiment analysis models')
     parser.add_argument('--model', type=str, required=True, choices=['BOW', 'DAN', 'SUBWORDDAN'], 
                        help='Model type to train')
+    # Parse command-line arguments
     args = parser.parse_args()
 
-    # Use the 300d GloVe file always (hardcoded)
-    glove_file = 'data/glove.6B.300d-relativized.txt'
+    # Use the 300d GloVe file for DAN
+    glove_file = 'data/glove.6B.300d-relativized.txt'   
     print(f"Using GloVe file: {glove_file}\n")
 
-    # Load dataset (BOW defaults for convenience)
+    # Load dataset 
     start_time = time.time()
     train_data = SentimentDatasetBOW("data/train.txt")
     dev_data = SentimentDatasetBOW("data/dev.txt", vectorizer=train_data.vectorizer, train=False)
@@ -110,13 +113,11 @@ def main():
     elapsed_time = end_time - start_time
     print(f"Data loaded in : {elapsed_time} seconds\n")
 
-    # ==================== BOW Model ====================
+    # BOW Model 
     if args.model == "BOW":
         print("=" * 60)
         print("TRAINING BAG-OF-WORDS (BOW) MODELS")
         print("=" * 60)
-        
-        print("\nUsing preloaded BOW data...")
         
         # Train 2-layer BOW
         print("\n2-Layer BOW Network:")
@@ -157,14 +158,13 @@ def main():
         plt.savefig('bow_results.png', dpi=100)
         print("\n✓ Saved: bow_results.png")
     
-    # ==================== DAN Model ====================
+    # DAN Model
     elif args.model == "DAN":
         print("=" * 60)
         print("TRAINING DEEP AVERAGING NETWORK (DAN) MODELS")
         print("=" * 60)
         
-        # Load data
-        print("\nLoading data...")
+        # Load data for DAN
         train_data = SentimentDatasetDAN("data/train.txt")
         dev_data = SentimentDatasetDAN("data/dev.txt", word_to_idx=train_data.word_to_idx, train=False)
 
@@ -174,16 +174,16 @@ def main():
         vocab_size = len(train_data.word_to_idx)
         print(f"Vocabulary size: {vocab_size}")
          
-        # ========== PART 1A: GloVe Embeddings ==========
+        # PART 1A: GloVe Embeddings 
         print("\n" + "=" * 60)
         print("PART 1A: DAN with GloVe Embeddings (Frozen)")
         print("=" * 60)
         
-        print(f"\nLoading GloVe embeddings from {glove_file}...")
+        # Loading GloVe embeddings from glove file
         pretrained_embeddings, emb_dim = load_glove_embeddings(glove_file, train_data.word_to_idx)
 
-        # Train final 2-layer model with best config (using experiment wrapper)
-        print("\nTraining final 2-Layer GloVe model with best hyperparameters...")
+        # Train final 2-layer model 
+        print("\nTraining final 2-Layer GloVe model...")
         glove_2_train, glove_2_dev = experiment(
             DAN_2Layer(
                 pretrained_embeddings=pretrained_embeddings,
@@ -214,12 +214,12 @@ def main():
         plt.savefig('dan_glove_results.png', dpi=100)
         print("\n✓ Saved: dan_glove_results.png")
         
-        # ========== PART 1B: Random Embeddings ==========
+        # PART 1B: Random Embeddings
         print("\n" + "=" * 60)
         print("PART 1B: DAN with Random Embeddings (Trainable)")
         print("=" * 60)
 
-        # Train final 2-layer Random model with best config (using experiment wrapper)
+        # Train final 2-layer Random model 
         print("\nTraining final 2-Layer Random model with best hyperparameters...")
         rand_2_train, rand_2_dev = experiment(
             DAN_2Layer(
@@ -260,21 +260,22 @@ def main():
         print("✓ Saved: dan_random_results.png")
 
         
-# ==================== SUBWORDDAN (BPE Only) ====================
+    # SUBWORDDAN (BPE) Model
     elif args.model == "SUBWORDDAN":
         print("=" * 60)
         print("TRAINING SUBWORD DAN (BPE) MODELS")
         print("=" * 60)
 
-        # Learn BPE merges from train.txt and segment on-the-fly
-        from bpe_utils import BPE, BPESentimentDataset
+        # Learn BPE merges from train.txt and segment 
         print("\nLearning BPE merges from train.txt...")
         with open('data/train.txt', 'r', encoding='utf-8') as f:
             corpus = [line.strip().split('\t', 1)[-1] for line in f if line.strip()]
-        bpe = BPE(num_merges=10000)  # Change num_merges to experiment with vocab size
+        
+        # num of merges changes vocab size, 10k is medium and optimal
+        bpe = BPE(num_merges=10000)  
         bpe.fit(corpus)
 
-        print("\nLoading BPE-segmented data (in memory)...")
+        # load data
         train_data = BPESentimentDataset('data/train.txt', bpe)
         dev_data = BPESentimentDataset('data/dev.txt', bpe, word_to_idx=train_data.word_to_idx, train=False)
         train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
@@ -282,8 +283,8 @@ def main():
         vocab_size = len(train_data.word_to_idx)
         print(f"BPE Vocabulary size: {vocab_size}")
 
-        # Train final 2-layer BPE model with best config (using experiment wrapper)
-        print("\nTraining final 2-Layer BPE model with best hyperparameters...")
+        # Train final 2-layer BPE model 
+        print("\nTraining final 2-Layer BPE model...")
         bpe_2_train, bpe_2_dev = experiment(
             DAN_2Layer(
                 vocab_size=vocab_size,
