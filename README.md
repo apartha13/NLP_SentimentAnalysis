@@ -7,10 +7,11 @@ This repository contains code for sentiment analysis using Bag-of-Words (BOW), D
 - Python 3.8+
 - PyTorch
 - matplotlib
+- numpy
 
 Install dependencies (if not already installed):
 ```
-pip install torch matplotlib
+pip install torch matplotlib numpy
 ```
 Ideally, create a virtual environment to install these dependencies as seen in the PDF for the assignment.
 
