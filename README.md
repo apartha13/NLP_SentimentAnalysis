@@ -1,6 +1,6 @@
 # Sentiment Analysis with BOW, DAN, and BPE (SUBWORDDAN)
 
-This repository contains code for sentiment analysis using Bag-of-Words (BOW), Deep Averaging Network (DAN), and Subword-based DAN (BPE) models. The code is implemented in Python with PyTorch.
+This repository contains code for sentiment analysis using Bag-of-Words (BOW), Deep Averaging Network (DAN), and Subword-based DAN (BPE) models. Code is implemented in Python with PyTorch.
 
 ## Requirements
 
@@ -12,6 +12,7 @@ Install dependencies (if not already installed):
 ```
 pip install torch matplotlib
 ```
+Ideally, create a virtual environment to install these dependencies as seen in the PDF for the assignment.
 
 ## Data
 
@@ -51,12 +52,8 @@ python main.py --model SUBWORDDAN
 - `data/` — Data and embeddings
 
 ## Notes
-- All BPE segmentation is performed in memory (no intermediate files).
-- For best results, use the provided GloVe file and ensure data is formatted as expected.
+- If you want the best results, use the provided GloVe file and ensure data is formatted as expected.
 
 ## Troubleshooting
-- If you encounter slow BPE processing, try reducing `num_merges` for testing.
+- If you encounter slow BPE processing, try reducing `num_merges` for testing but the one I used is 10,000 merges which is the optimal vocab_size for me.
 - Ensure all dependencies are installed and data files are present in the `data/` directory.
-
-## License
-This project is for educational purposes.
