@@ -132,7 +132,8 @@ def read_word_embeddings(embeddings_file: str) -> WordEmbeddings:
     word_indexer.add_and_get_index("PAD")
     # Make position 1 the UNK token
     word_indexer.add_and_get_index("UNK")
-    for line in f:
+    print(f"Loading embeddings from {embeddings_file}...", end=" ", flush=True)
+    for line_num, line in enumerate(f, 1):
         if line.strip() != "":
             space_idx = line.find(' ')
             word = line[:space_idx]
@@ -146,7 +147,11 @@ def read_word_embeddings(embeddings_file: str) -> WordEmbeddings:
                 vectors.append(np.zeros(vector.shape[0]))
                 vectors.append(np.zeros(vector.shape[0]))
             vectors.append(vector)
+        # Print progress every 50k lines
+        if line_num % 50000 == 0:
+            print(f"{line_num//1000}k...", end=" ", flush=True)
     f.close()
+    print(f"Done!")
     print("Read in " + repr(len(word_indexer)) + " vectors of size " + repr(vectors[0].shape[0]))
     # Turn vectors into a 2-D numpy array
     return WordEmbeddings(word_indexer, np.array(vectors))
